@@ -14,7 +14,7 @@ A generic [fluentd][1] output plugin for sending logs to Stena-Agent
 
 ## Usage notes
 
-If you'd like to retry failed requests, consider using [fluent-plugin-bufferize][3].
+If you'd like to retry failed requests, consider using [fluent-plugin-bufferize][2].
 
 ----
 

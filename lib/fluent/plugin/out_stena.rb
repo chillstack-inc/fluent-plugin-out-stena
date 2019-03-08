@@ -88,7 +88,6 @@ class Fluent::Plugin::HTTPOutput < Fluent::Plugin::Output
     body = {:log => {:contents => content, :identification => content, :occuredAt => now}}
     set_json_body(req, body)
     req
-    puts req.body
   end
 
   def set_header(req, tag, time, record)
