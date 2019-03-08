@@ -2,6 +2,7 @@ require 'net/http'
 require 'uri'
 require 'yajl'
 require 'fluent/plugin/output'
+require 'digest/sha2'
 
 class Fluent::Plugin::HTTPOutput < Fluent::Plugin::Output
   Fluent::Plugin.register_output('stena', self)
@@ -17,6 +18,9 @@ class Fluent::Plugin::HTTPOutput < Fluent::Plugin::Output
 
   # Endpoint URL ex. http://localhost.local/api/
   config_param :endpoint_url, :string
+
+  config_param :log_identification_type, :enum, list: [:hash, :log, :key], :default => :hash
+  config_param :log_identification_key, :string, :default => ''
 
   # Set Net::HTTP.verify_mode to `OpenSSL::SSL::VERIFY_NONE`
   config_param :ssl_no_verify, :bool, :default => false
@@ -68,6 +72,10 @@ class Fluent::Plugin::HTTPOutput < Fluent::Plugin::Output
     if @formatter_config = conf.elements('format').first
       @formatter = formatter_create
     end
+
+    if @log_identification_type == :key && @log_identification_key == ''
+      raise Fluent::ConfigError, "'log_identification_key' is required."
+    end
   end
 
   def start
@@ -82,10 +90,27 @@ class Fluent::Plugin::HTTPOutput < Fluent::Plugin::Output
     @endpoint_url
   end
 
+  def log_identification(record)
+    if @log_identification_type == :hash
+	  log_id = Digest::SHA256.hexdigest record.to_json
+    elsif @log_identification_type == :log
+      log_id = record.to_json
+    elsif @log_identification_type == :key
+      if record.has_key?(@log_identification_key)
+        log_id = record[@log_identification_key]
+      else
+        log.warn "Log dosen't contain '#{@log_identification_key}'"
+	    log_id = Digest::SHA256.hexdigest record.to_json
+      end
+    end
+    log_id
+  end
+
   def set_body(req, tag, time, record)
-    now = Time.now.strftime("%Y-%m-%dT%H:%M:%S.%LZ")
-    content = record.to_s
-    body = {:log => {:contents => content, :identification => content, :occuredAt => now}}
+    now = Time.at(time).strftime("%Y-%m-%dT%H:%M:%S.%LZ")
+    content = record.to_json.to_s
+    body = {:log => {:contents => content, :identification => log_identification(record), :occuredAt => now}}
+    log.info("Request to Stena-agent with #{body.to_json}.")
     set_json_body(req, body)
     req
   end
