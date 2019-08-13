@@ -7,9 +7,11 @@ A generic [fluentd][1] output plugin for sending logs to Stena-Agent
     <match *>
       @type stena
       endpoint_url    http://localhost.local/predict
-      rate_limit_msec 100    # default: 0 = no rate limiting
-      raise_on_error  false  # default: true
-      buffered        true   # default: false. Switch non-buffered/buffered mode
+      log_identification_type log # default: hash. [hash, log, key]
+      log_identification_key user # defualt: ''. Available when log_identification_type is log.
+      rate_limit_msec 100         # default: 0 = no rate limiting
+      raise_on_error  false       # default: true
+      buffered        true        # default: false. Switch non-buffered/buffered mode
     </match>
 
 ## Usage notes
